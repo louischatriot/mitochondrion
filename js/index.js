@@ -10,12 +10,13 @@ var functions = {
 }
 
 
-function Node(value, cell, func, left, right) {
+function Node(value, cell, func, left, right, raw) {
     this.value = value
     this.cell = cell
     this.func = func
     this.left = left
     this.right = right
+    this.raw = raw
 }
 
 Node.prototype.evaluate = function () {
@@ -43,8 +44,8 @@ function extract_cell_name(f) {
 }
 
 
-
-var single_character_elements = ["(", ")", "+", "*", "-", "/", ","]
+// TODO: add support for parentheses
+var single_character_elements = ["+", "*", "-", "/"]
 
 // Convention: functions are lowercase, cell coordinates upper case
 function parse_formula(f) {
@@ -67,8 +68,21 @@ function parse_formula(f) {
             func_name = f.match(new RegExp("^.{" + i + "}([a-z]+)"))
             if (!func_name) { throw new Error("Expected function name") }
             func_name = func_name[1]
-            elements.push(func_name)
             i += func_name.length
+
+            if (f[i] !== "(") { throw new Error("Expected opening parenthesis") }
+            func_name += "("
+            i += 1
+            opened = 1
+            while (opened > 0 && i < f.length) {
+                func_name += f[i]
+                if (f[i] === "(") { opened += 1 }
+                if (f[i] === ")") { opened -= 1 }
+                i += 1
+            }
+
+            if (opened > 0) { throw new Error("Expected closing parenthesis") }
+            elements.push(func_name)
 
         } else if (f[i] >= 'A' && f[i] <= 'Z') {   // Cell name
             cell_name = f.match(new RegExp("^.{" + i + "}([A-Z]+[0-9]+)"))
@@ -99,8 +113,32 @@ function parse_formula(f) {
     }
 
     // Create calculation tree
-
     console.log(elements);
+
+    var i0, j, n
+    while (i0 !== -1) {
+        _elements = []
+        i0 = elements.indexOf("*")
+
+        if (i0 !== -1) {
+            for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
+            n = new Node(null, null, "multiply", null, null)
+            n.left = new Node(null, null, null, null, null, elements[i0 - 1])
+            n.right = new Node(null, null, null, null, null, elements[i0 + 1])
+            _elements.push(n)
+            for (j = i0 + 2; j < elements.length; j += 1) { _elements.push(elements[j]) }
+
+            elements = _elements
+        }
+
+    }
+
+
+    console.log(_elements);
+
+    console.log("---------------------------");
+
+    return elements
 
     tree = create_tree(elements)
 
@@ -108,7 +146,6 @@ function parse_formula(f) {
 
 
 
-    return elements
 }
 
 
