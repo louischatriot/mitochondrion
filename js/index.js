@@ -37,6 +37,15 @@ function Node(args) {
         return
     }
 
+    if (typeof(args) === "number") {
+        this.value = args
+        return
+    }
+
+    if (args instanceof Node) {
+        this.children = args.children
+    }
+
     if (!args) { args = {} }
 
     this.raw = args.raw
@@ -56,6 +65,8 @@ Node.prototype.print = function(depth) {
     if (this.func) { rep.push("func: " + this.func) }
 
     rep = whitespace(depth) + "< " + rep.join("; ") + " >"
+    //console.log(this);
+
     console.log(rep);
 
     for (child of this.children) {
