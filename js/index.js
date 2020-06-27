@@ -1,23 +1,3 @@
-console.log("===");
-
-function whitespace(n) {
-    if (!n) { return "" }
-    var res = []
-    for (var i = 0; i < n; i += 1) {
-        res.push((i % 4 === 0) ? " " : " ")
-    }
-
-    //if (res.length >=4) {
-        //res[res.length - 1] = "-"
-        //res[res.length - 2] = "-"
-        //res[res.length - 3] = "-"
-        //res[res.length - 4] = "└"
-    //}
-
-    return res.join("")
-}
-
-
 // By order of priority
 var operators = ["*", "/", "+", "-"]
 
@@ -43,7 +23,7 @@ function Node(args) {
     this.children = []
 
     if (typeof(args) === "string") {
-        this.raw = args
+        this.raw = "=" + args
         return
     }
 
@@ -109,7 +89,7 @@ Node.prototype.print = function(prefix) {
 }
 
 Node.prototype.add_child = function(n) {
-    // TODO: check that n is a Node
+    if (!n instanceof Node) { throw new Error("Expected node") }
     this.children.push(n)
 }
 
@@ -184,45 +164,62 @@ Node.prototype.construct_from_raw = function() {
         }
     }
 
-    // Tree-ify infix operators
-    // TODO: add support for parentheses
-    console.log(elements);
+    if (elements.length > 1) {   // Infix expression
+        // TODO: add support for parentheses
+        var i0, j, n
+        for (op of operators) {
+            i0 = null
+            while (i0 !== -1) {
+                _elements = []
+                i0 = elements.indexOf(op)
 
-    var i0, j, n
+                if (i0 !== -1) {
+                    for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
+                    n = new Node({ func: operators_mapping[op] })
+                    n.add_child(new Node(elements[i0 - 1]))
+                    n.add_child(new Node(elements[i0 + 1]))
+                    _elements.push(n)
+                    for (j = i0 + 2; j < elements.length; j += 1) { _elements.push(elements[j]) }
+                    elements = _elements
+                }
+            }
+        }
+        this.clone_from_node(elements[0])
 
-    for (op of operators) {
-        i0 = null
-        while (i0 !== -1) {
-            _elements = []
-            i0 = elements.indexOf(op)
+    } else {   // Value, cell or function
+        var elt = elements[0]
+        if (typeof(elt) === "number") {
+            this.value = elt
+        } else if (elt.match(/^\$?[A-Z]+\$?[0-9]+$/)) {
+            this.cell = elt
+        } else {   // Function
+            var func_name = elt.match(/^([a-z]+)/)
+            if (!func_name) { throw new Error("Expected function name") }
+            func_name = func_name[1]
 
-            if (i0 !== -1) {
-                for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
-                n = new Node({ func: operators_mapping[op] })
-                n.add_child(new Node(elements[i0 - 1]))
-                n.add_child(new Node(elements[i0 + 1]))
-                _elements.push(n)
-                for (j = i0 + 2; j < elements.length; j += 1) { _elements.push(elements[j]) }
-                elements = _elements
+            var args = [], opened = 1, i = func_name.length + 1, arg
+            while (i < elt.length) {
+                arg = ""
+                while (i < elt.length) {
+                    if (opened === 1 && (elt[i] === "," || elt[i] === ")")) { break }
+                    if (elt[i] === "(") { opened += 1 }
+                    if (elt[i] === ")") { opened -= 1 }
+
+                    arg += elt[i]
+                    i += 1
+                }
+                args.push(arg)
+                if (elt[i] === ")") { break }
+                i += 1
             }
 
+            this.func = func_name
+            for (arg of args) { this.add_child(new Node(arg)) }
         }
     }
 
-
-    this.clone_from_node(elements[0])
-  console.log(this);
-    this.print()
-
-    // TODO: functions when only one element in elements array
-
-
-    //console.log("---------------------------");
-    //console.log(elements);
-
-
-    //elements[0].print()
-
+    this.raw = null
+    for (child of this.children) { child.construct_from_raw() }
 }
 
 Node.prototype.evaluate = function() {
@@ -240,83 +237,16 @@ Node.prototype.evaluate = function() {
 
 
 var formula = "=55+44*2+  66*7 -plus(4,3)"
-var formula = "=invert(768)"
+var formula = "=42"
+var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
 
 var n = new Node({ raw: formula })
 
 n.construct_from_raw()
 
+n.print()
+
 // TODO: add support for parentheses
-
-
-
-
-
-function create_tree(elements) {
-    if (elements.length === 0) { return null }
-
-    var elt = elements[0]
-
-    if (elements.length === 1) {
-        if (elt[0] >= 'A' && elt[0] <= 'Z') {
-            return new Node(null, elt, null, null, null)
-        } else if (! isNaN(elt)) {
-            return new Node(elt, null, null, null, null)
-        } else {
-            throw new Error("Unexpected element type")
-        }
-    }
-
-    if (elt[0] >= 'a' && elt[0] <= 'z') {   // Function
-        if (!functions[elt]) {
-            throw new Error("Unknown function: " + elt)
-        }
-
-        if (elements.length === 1) {
-            throw new Error("Nothing passed to function " + elt)
-        }
-
-        var func = functions[elt]
-        var args = [], opened = 1, i = 2, arg
-
-        while (opened > 0 && i < elements.length) {
-            arg = []
-            while (i < elements.length) {
-                if (opened === 1 && (elements[i] === "," || elements[i] === ")")) { break }
-
-                if (elements[i] === "(") {
-                    opened += 1
-                }
-
-                if (elements[i] === ")") {
-                    opened -= 1
-                }
-
-                arg.push(elements[i])
-                i += 1
-            }
-
-            args.push(arg)
-
-            if (elements[i] === ")") {
-                break
-            }
-
-            i += 1
-        }
-
-        console.log(args);
-
-        throw new Error("Missing closing parenthesis")
-
-    }
-
-
-}
-
-
-
-
 
 
 
