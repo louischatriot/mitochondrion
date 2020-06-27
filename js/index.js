@@ -53,7 +53,7 @@ function Node(args) {
     }
 
     if (args instanceof Node) {
-        this.children = args.children
+        this.clone_from_node(args)
     }
 
     if (!args) { args = {} }
@@ -64,6 +64,13 @@ function Node(args) {
     this.func = args.func
 }
 
+Node.prototype.clone_from_node = function(n) {
+    this.children = n.children
+    this.raw = n.raw
+    this.value = n.value
+    this.cell = n.cell
+    this.func = n.func
+}
 
 Node.prototype.print = function(prefix) {
     if (!prefix) { prefix = [] }
@@ -93,20 +100,10 @@ Node.prototype.print = function(prefix) {
         prefix[prefix.length - 1] = "empty"
     }
 
-    //console.log("==============");
-    //console.log(prefix);
-
     var p
     for (var i = 0; i < this.children.length; i += 1) {
         p = prefix.slice()
-
-        //console.log("ZZZ");
-      //console.log(p);
-
         p.push(i === this.children.length - 1 ? "end" : "full")
-
-      //console.log(p);
-
         this.children[i].print(p)
     }
 }
@@ -187,7 +184,8 @@ Node.prototype.construct_from_raw = function() {
         }
     }
 
-    // Create calculation tree
+    // Tree-ify infix operators
+    // TODO: add support for parentheses
     console.log(elements);
 
     var i0, j, n
@@ -212,12 +210,18 @@ Node.prototype.construct_from_raw = function() {
     }
 
 
-    console.log("---------------------------");
-    console.log(elements);
+    this.clone_from_node(elements[0])
+  console.log(this);
+    this.print()
 
-    //this.print()
+    // TODO: functions when only one element in elements array
 
-    elements[0].print()
+
+    //console.log("---------------------------");
+    //console.log(elements);
+
+
+    //elements[0].print()
 
 }
 
@@ -236,6 +240,7 @@ Node.prototype.evaluate = function() {
 
 
 var formula = "=55+44*2+  66*7 -plus(4,3)"
+var formula = "=invert(768)"
 
 var n = new Node({ raw: formula })
 
