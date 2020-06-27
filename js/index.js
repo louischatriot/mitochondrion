@@ -93,14 +93,19 @@ Node.prototype.add_child = function(n) {
     this.children.push(n)
 }
 
+// Could be better written :)
 Node.prototype.construct_from_raw = function() {
-    if (!this.raw) { return }
+    if (!this.raw) {
+        for (child of this.children) { child.construct_from_raw() }
+        return
+    }
 
     if (this.raw.length === 0) { this.value = "" }
     if (this.raw[0] === "'") { this.value = this.raw.substring(1) }
     if (this.raw[0] !== "=") { this.value = this.raw }
     if (this.value) {
         this.raw = null
+        for (child of this.children) { child.construct_from_raw() }
         return
     }
 
@@ -236,9 +241,10 @@ Node.prototype.evaluate = function() {
 
 
 
-var formula = "=55+44*2+  66*7 -plus(4,3)"
-var formula = "=42"
-var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
+var formula = "=E5+44*2+  66*7 -plus(4,3)"
+//var formula = "=42"
+//var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
+//var formula = "=E6+44+66"
 
 var n = new Node({ raw: formula })
 
