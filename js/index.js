@@ -2,9 +2,19 @@ console.log("===");
 
 function whitespace(n) {
     if (!n) { return "" }
-    var res = ""
-    for (var i = 0; i < n; i += 1) { res += " " }
-    return res
+    var res = []
+    for (var i = 0; i < n; i += 1) {
+        res.push((i % 4 === 0) ? " " : " ")
+    }
+
+    //if (res.length >=4) {
+        //res[res.length - 1] = "-"
+        //res[res.length - 2] = "-"
+        //res[res.length - 3] = "-"
+        //res[res.length - 4] = "└"
+    //}
+
+    return res.join("")
 }
 
 
