@@ -65,22 +65,49 @@ function Node(args) {
 }
 
 
-Node.prototype.print = function(depth) {
-    if (!depth) { depth = 0 }
+Node.prototype.print = function(prefix) {
+    if (!prefix) { prefix = [] }
 
     var rep = []
     if (this.raw) { rep.push("raw: " + this.raw) }
     if (this.value) { rep.push("value: " + this.value) }
     if (this.cell) { rep.push("cell: " + this.cell) }
     if (this.func) { rep.push("func: " + this.func) }
+    rep = "< " + rep.join("; ") + " >"
 
-    rep = whitespace(depth) + "< " + rep.join("; ") + " >"
-    //console.log(this);
+    var white = []
+    for (var w of prefix) {
+        if (w === "full") { white.push("|   ") }
+        if (w === "empty") { white.push("    ") }
+        if (w === "end") { white.push("└   ") }
+    }
 
+    if (white.length >=1) {
+        white[white.length - 1] = white[white.length - 1].replace(/ /g, "-")
+    }
+
+    rep = white.join("") + rep
     console.log(rep);
 
-    for (child of this.children) {
-        child.print(depth + 4)
+    if (prefix[prefix.length - 1] === "end") {
+        prefix[prefix.length - 1] = "empty"
+    }
+
+    //console.log("==============");
+    //console.log(prefix);
+
+    var p
+    for (var i = 0; i < this.children.length; i += 1) {
+        p = prefix.slice()
+
+        //console.log("ZZZ");
+      //console.log(p);
+
+        p.push(i === this.children.length - 1 ? "end" : "full")
+
+      //console.log(p);
+
+        this.children[i].print(p)
     }
 }
 
