@@ -1,5 +1,23 @@
 console.log("===");
 
+function whitespace(n) {
+    if (!n) { return "" }
+    var res = ""
+    for (var i = 0; i < n; i += 1) { res += " " }
+    return res
+}
+
+
+// By order of priority
+var operators = ["*", "/", "+", "-"]
+
+var operators_mapping = {
+    "+": "plus",
+    "-": "minus",
+    "*": "multiply",
+    "/": "divide",
+}
+
 
 function plus(a, b) { return a + b }
 function invert(a) { return - a }
@@ -10,61 +28,70 @@ var functions = {
 }
 
 
-function Node(value, cell, func, left, right, raw) {
-    this.value = value
-    this.cell = cell
-    this.func = func
-    this.left = left
-    this.right = right
-    this.raw = raw
+// Simulating named arguments with an object
+function Node(args) {
+    this.children = []
+
+    if (typeof(args) === "string") {
+        this.raw = args
+        return
+    }
+
+    if (!args) { args = {} }
+
+    this.raw = args.raw
+    this.value = args.value
+    this.cell = args.cell
+    this.func = args.func
 }
 
-Node.prototype.evaluate = function () {
-    if (this.value) {
-        return this.value
-    } else if (this.cell) {
-        return this.cell.value()
-    } else if (this.func) {
-        if (!this.left) {
-            return this.func(this.right.evaluate())
-        } else if (!this.right) {
-            return this.func(this.left.evaluate())
-        } else {
-            return this.func(this.left.evaluate(), this.right.evaluate())
-        }
-    } else {
-        throw new Error("Illegal node!")
+
+Node.prototype.print = function(depth) {
+    if (!depth) { depth = 0 }
+
+    var rep = []
+    if (this.raw) { rep.push("raw: " + this.raw) }
+    if (this.value) { rep.push("value: " + this.value) }
+    if (this.cell) { rep.push("cell: " + this.cell) }
+    if (this.func) { rep.push("func: " + this.func) }
+
+    rep = whitespace(depth) + "< " + rep.join("; ") + " >"
+    console.log(rep);
+
+    for (child of this.children) {
+        child.print(depth + 4)
     }
 }
 
-
-
-function extract_cell_name(f) {
-
+Node.prototype.add_child = function(n) {
+    // TODO: check that n is a Node
+    this.children.push(n)
 }
 
+Node.prototype.construct_from_raw = function() {
+    if (!this.raw) { return }
 
-// TODO: add support for parentheses
-var single_character_elements = ["+", "*", "-", "/"]
+    if (this.raw.length === 0) { this.value = "" }
+    if (this.raw[0] === "'") { this.value = this.raw.substring(1) }
+    if (this.raw[0] !== "=") { this.value = this.raw }
+    if (this.value) {
+        this.raw = null
+        return
+    }
 
-// Convention: functions are lowercase, cell coordinates upper case
-function parse_formula(f) {
-    if (!f || f.length === 0) { return new Node("") }
-    if (f[0] === "'") { return new Node(f.substring(1)) }
-    if (f[0] !== "=") { return new Node(f) }
+    // raw is a formula
+    var f = this.raw.substring(1).replace(/ /g, "")
 
-    // We have a formula
     var elements = [], func_name, cell_name, number, length
-    var i = 1
-    f = f.replace(/ /g, "")
+    var i = 0
 
     // Extract elements
     while (i < f.length) {
-        if (single_character_elements.indexOf(f[i]) !== -1) {
+        if (operators.indexOf(f[i]) !== -1) {
             elements.push(f[i])
             i += 1
 
-        } else if (f[i] >= 'a' && f[i] <= 'z') {   // Function name
+        } else if (f[i] >= 'a' && f[i] <= 'z') {   // Function name and body
             func_name = f.match(new RegExp("^.{" + i + "}([a-z]+)"))
             if (!func_name) { throw new Error("Expected function name") }
             func_name = func_name[1]
@@ -116,37 +143,58 @@ function parse_formula(f) {
     console.log(elements);
 
     var i0, j, n
-    while (i0 !== -1) {
-        _elements = []
-        i0 = elements.indexOf("*")
 
-        if (i0 !== -1) {
-            for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
-            n = new Node(null, null, "multiply", null, null)
-            n.left = new Node(null, null, null, null, null, elements[i0 - 1])
-            n.right = new Node(null, null, null, null, null, elements[i0 + 1])
-            _elements.push(n)
-            for (j = i0 + 2; j < elements.length; j += 1) { _elements.push(elements[j]) }
+    for (op of operators) {
+        i0 = null
+        while (i0 !== -1) {
+            _elements = []
+            i0 = elements.indexOf(op)
 
-            elements = _elements
+            if (i0 !== -1) {
+                for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
+                n = new Node({ func: operators_mapping[op] })
+                n.add_child(new Node(elements[i0 - 1]))
+                n.add_child(new Node(elements[i0 + 1]))
+                _elements.push(n)
+                for (j = i0 + 2; j < elements.length; j += 1) { _elements.push(elements[j]) }
+                elements = _elements
+            }
+
         }
-
     }
 
 
-    console.log(_elements);
-
     console.log("---------------------------");
+    console.log(elements);
 
-    return elements
+    //this.print()
 
-    tree = create_tree(elements)
-
-    console.log(tree);
-
-
+    elements[0].print()
 
 }
+
+Node.prototype.evaluate = function() {
+    if (this.value) {
+        return this.value
+    } else if (this.cell) {
+        return this.cell.value()
+    } else if (this.func) {
+        // TODO
+    } else {
+        throw new Error("Illegal node!")
+    }
+}
+
+
+
+var formula = "=55+44*2+  66*7 -plus(4,3)"
+
+var n = new Node({ raw: formula })
+
+n.construct_from_raw()
+
+// TODO: add support for parentheses
+
 
 
 
