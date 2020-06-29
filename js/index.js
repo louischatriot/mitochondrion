@@ -388,6 +388,9 @@ var x0 = 30, y0 = 100
 var X = 5, Y = 15
 var x, y, div
 var container = document.getElementById("container")
+var cells = document.createElement('div')
+
+container.appendChild(cells)
 
 for (x = 1; x <= X; x += 1) {
     for (y = 1; y <= Y; y += 1) {
@@ -397,14 +400,14 @@ for (x = 1; x <= X; x += 1) {
         div.style.top = (y0 + cell_height * (y - 1)) + "px"
         div.setAttribute("cell-name", int_to_alpha(x) + y)
 
-        container.appendChild(div)
+        cells.appendChild(div)
     }
 }
 
 var input_bar = document.createElement('input')
 input_bar.classList.add("cell")
 input_bar.style.left = x0 + "px"
-input_bar.style.top = y0 - 60 + "px"
+input_bar.style.top = (y0 - 70) + "px"
 input_bar.style.width = (X * cell_width) + "px"
 container.appendChild(input_bar)
 
@@ -412,7 +415,7 @@ container.appendChild(input_bar)
 var s = new Spreadsheet()
 
 function get_div(ref) {
-    return container.querySelectorAll("div[cell-name=" + ref + "]")[0]
+    return cells.querySelectorAll("div[cell-name=" + ref + "]")[0]
 }
 
 function set_cell_formula(ref, formula) {
@@ -424,25 +427,39 @@ function set_cell_formula(ref, formula) {
     }
 }
 
+var selected_ref
 
 // Selecting a cell
-for (cell of container.querySelectorAll("div.cell")) {
-    cell.addEventListener("click", function (evt) {
-        var ref = evt.target.getAttribute("cell-name");
-        for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
-        evt.target.classList.add("selected")
-        input_bar.value = s.get_contents(ref)
-        input_bar.focus()
-    })
-}
+cells.addEventListener("click", function (evt) {
+    var ref = evt.target.getAttribute("cell-name");
+    for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
+    evt.target.classList.add("selected")
+    selected_ref = ref
+
+    input_bar.value = s.get_contents(ref)
+    input_bar.focus()
+})
 
 
 input_bar.addEventListener("keypress", function(evt) {
     if (evt.keyCode === 13) {   // Press Enter
-        var ref = container.querySelectorAll(".selected")[0].getAttribute("cell-name")
-        set_cell_formula(ref, evt.target.value)
-        for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
+        set_cell_formula(selected_ref, evt.target.value)
+        get_div(selected_ref).classList.remove("selected")
         evt.target.value = ""
     }
 })
+
+var to_be_copied
+
+container.addEventListener("keydown", function(evt) {
+    if (evt.key === "c" && evt.ctrlKey) {
+        if (to_be_copied) { get_div(to_be_copied).classList.remove("to-be-copied") }
+        get_div(selected_ref).classList.add("to-be-copied")
+        to_be_copied = selected_ref
+    }
+
+
+})
+
+
 
