@@ -127,6 +127,10 @@ Spreadsheet.prototype.get = function(x, y) {
     }
 }
 
+Spreadsheet.prototype.get_referencing = function(ref) {
+    return (this.cells_referencing[ref] || [])
+}
+
 
 // Simulating named arguments with an object
 function Node(args) {
@@ -405,10 +409,35 @@ for (x = 1; x <= X; x += 1) {
         div.classList.add("cell")
         div.style.left = (x0 + cell_width * (x - 1)) + "px"
         div.style.top = (y0 + cell_height * (y - 1)) + "px"
+        div.setAttribute("cell-name", int_to_alpha(x) + y)
 
         container.appendChild(div)
     }
 }
+
+var input_bar = document.createElement('div')
+input_bar.classList.add("cell")
+input_bar.style.left = x0 + "px"
+input_bar.style.top = y0 - 60 + "px"
+input_bar.style.width = (X * cell_width) + "px"
+container.appendChild(input_bar)
+
+
+var s = new Spreadsheet()
+
+function get_div(ref) {
+    return container.querySelectorAll("div[cell-name=" + ref + "]")[0]
+}
+
+function set_cell_formula(ref, formula) {
+    s.set(ref, formula)
+    get_div(ref).innerHTML = s.get(ref)
+
+    for (cell of s.get_referencing(ref)) {
+        get_div(cell).innerHTML = s.get(cell)
+    }
+}
+
 
 
 
@@ -427,7 +456,6 @@ for (x = 1; x <= X; x += 1) {
 
 //n.print()
 
-var s = new Spreadsheet()
 
 
 // TODO: add support for parentheses
