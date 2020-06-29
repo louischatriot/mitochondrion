@@ -34,27 +34,24 @@ function alpha_to_int(s) {
     return res
 }
 
-function Cell(ref) {
-    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
 
-    this.x = alpha_to_int(parts[2])
-    this.x_fixed = (parts[1] === "$")
+// Useless abstraction
+//function Cell(ref) {
+    //var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+    //if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
 
-    this.y = parseInt(parts[4], 10)
-    this.y_fixed = (parts[3] === "$")
+    //this.x = alpha_to_int(parts[2])
+    //this.x_fixed = (parts[1] === "$")
 
-    this.ref = ref
-}
+    //this.y = parseInt(parts[4], 10)
+    //this.y_fixed = (parts[3] === "$")
 
-Cell.prototype.to_string = function() {
-    return "ref: " + this.ref + " ; x: " + this.x + (this.x_fixed ? " (fixed)": "") + " ; y: " + this.y + (this.y_fixed ? " (fixed)": "")
-}
+    //this.ref = ref
+//}
 
-
-
-var c = new Cell("$IV$64")
-console.log(c.to_string());
+//Cell.prototype.to_string = function() {
+    //return "ref: " + this.ref + " ; x: " + this.x + (this.x_fixed ? " (fixed)": "") + " ; y: " + this.y + (this.y_fixed ? " (fixed)": "")
+//}
 
 
 // Naive datastructure: 2D array, initially empty
@@ -98,13 +95,15 @@ Spreadsheet.prototype.get = function(x, y) {
     if (!this.parsed_formulas[x] || !this.parsed_formulas[x][y]) {
         return 0
     } else {
+        // TODO: detect cycles in cell references
+        // TODO: avoid calculating the same intermediate value multiple times (memoize recursive algorithm)
+        // TODO: don't calculate the same cell value multiple times if cell appears multiple times in the formula
+        var values = {}
+        for (cell of this.parsed_formulas[x][y].get_cells()) { values[cell] = this.get(cell) }
+        this.parsed_formulas[x][y].set_cell_values(values)
         return this.parsed_formulas[x][y].evaluate()
     }
 }
-
-
-var f = "=power(2,10)-20+invert(4)"
-var s = new Spreadsheet()
 
 
 // Simulating named arguments with an object
@@ -356,7 +355,7 @@ Node.prototype.evaluate = function() {
         return this.value
 
     } else if (this.cell) {
-        return this.cell.value()
+        return this.cell_value ? this.cell_value : 0
 
     } else if (this.func) {
         var f = functions[this.func]
@@ -378,11 +377,15 @@ Node.prototype.evaluate = function() {
 var formula = "=E6+44+66+IC45*E6"
 //var formula = "=power(2,10)-20+invert(4)"
 
+console.log(formula);
+
 var n = new Node(formula)
 
 n.construct_from_raw()
 
 n.print()
+
+var s = new Spreadsheet()
 
 
 // TODO: add support for parentheses
