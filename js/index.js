@@ -26,6 +26,87 @@ var functions = {
 }
 
 
+function alpha_to_int(s) {
+    var res = 0
+    for (var i = 0; i < s.length; i += 1) {
+        res += 26**(s.length - 1 - i) * (s.charCodeAt(i) - 64)
+    }
+    return res
+}
+
+function Cell(ref) {
+    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+
+    this.x = alpha_to_int(parts[2])
+    this.x_fixed = (parts[1] === "$")
+
+    this.y = parseInt(parts[4], 10)
+    this.y_fixed = (parts[3] === "$")
+
+    this.ref = ref
+}
+
+Cell.prototype.to_string = function() {
+    return "ref: " + this.ref + " ; x: " + this.x + (this.x_fixed ? " (fixed)": "") + " ; y: " + this.y + (this.y_fixed ? " (fixed)": "")
+}
+
+
+
+var c = new Cell("$IV$64")
+console.log(c.to_string());
+
+
+// Naive datastructure: 2D array, initially empty
+function Spreadsheet() {
+    this.cell_contents = []
+    this.parsed_formulas = []
+}
+
+Spreadsheet.prototype.set = function(x, y, formula) {
+    // Signature = reference, formula
+    if (typeof x === "string") {
+        formula = y
+        var ref = x
+        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+        x = alpha_to_int(parts[2])
+        y = parseInt(parts[4], 10)
+    }
+
+    if (!this.cell_contents[x]) { this.cell_contents[x] = [] }
+    if (!this.cell_contents[x][y]) { this.cell_contents[x][y] = formula }
+
+    var parsed_formula = new Node(formula)
+    parsed_formula.construct_from_raw()
+
+    if (!this.parsed_formulas[x]) { this.parsed_formulas[x] = [] }
+    if (!this.parsed_formulas[x][y]) { this.parsed_formulas[x][y] = parsed_formula }
+}
+
+Spreadsheet.prototype.get = function(x, y) {
+    // Signature = reference
+    if (typeof x === "string") {
+        var ref = x
+        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+        x = alpha_to_int(parts[2])
+        y = parseInt(parts[4], 10)
+    }
+
+    // Empty cell interpreted as equal to 0
+    if (!this.parsed_formulas[x] || !this.parsed_formulas[x][y]) {
+        return 0
+    } else {
+        return this.parsed_formulas[x][y].evaluate()
+    }
+}
+
+
+var f = "=power(2,10)-20+invert(4)"
+var s = new Spreadsheet()
+
+
 // Simulating named arguments with an object
 function Node(args) {
     this.children = []
@@ -50,7 +131,37 @@ function Node(args) {
     this.raw = args.raw
     this.value = args.value
     this.cell = args.cell
+    //this.cell_value = 0   // Default value
     this.func = args.func
+}
+
+// Traverse whole tree. f can modify the tree nodes. Returns all non undefined values returned by f
+Node.prototype.traverse = function(f) {
+    var res = []
+
+    if (f(this) !== undefined) {
+        res.push(f(this))
+    }
+
+    for (child of this.children) {
+        res = res.concat(child.traverse(f))
+    }
+
+    return res
+}
+
+Node.prototype.get_cells = function() {
+    return this.traverse(function(n) { if (n.cell) { return n.cell } })
+}
+
+// Cell are placeholders for their values until set_cell_values by calling Spreadsheet
+// values = { cell_reference: value }
+Node.prototype.set_cell_values = function(values) {
+    this.traverse(function(n) {
+        if (n.cell) {
+            n.cell_value = values[n.cell]
+        }
+    })
 }
 
 Node.prototype.clone_from_node = function(n) {
@@ -67,7 +178,7 @@ Node.prototype.print = function(prefix) {
     var rep = []
     if (this.raw) { rep.push("raw: " + this.raw) }
     if (this.value) { rep.push("value: " + this.value) }
-    if (this.cell) { rep.push("cell: " + this.cell) }
+    if (this.cell) { rep.push("cell: " + this.cell + " - value: " + this.cell_value) }
     if (this.func) { rep.push("func: " + this.func) }
     rep = "< " + rep.join("; ") + " >"
 
@@ -264,8 +375,8 @@ Node.prototype.evaluate = function() {
 //var formula = "=90+44*2+  66*7 -plus(4,3)"
 //var formula = "=42"
 //var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
-//var formula = "=E6+44+66"
-var formula = "=power(2,10)-20+invert(4)"
+var formula = "=E6+44+66+IC45*E6"
+//var formula = "=power(2,10)-20+invert(4)"
 
 var n = new Node(formula)
 
@@ -273,7 +384,6 @@ n.construct_from_raw()
 
 n.print()
 
-console.log(n.evaluate());
 
 // TODO: add support for parentheses
 
