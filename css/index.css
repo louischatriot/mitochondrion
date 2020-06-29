@@ -1,2 +1,10 @@
-
+div.cell {
+    border: solid 1px #bbb;
+    height: 24px;
+    width: 200px;
+    font-size: 18px;
+    font-family: Raleway;
+    position: fixed;
+    box-sizing: border-box;
+}
 

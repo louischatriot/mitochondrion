@@ -34,6 +34,18 @@ function alpha_to_int(s) {
     return res
 }
 
+function int_to_alpha(i) {
+    if (i === 1) { return "A" }
+    var res = "", q, r
+    i -= 1
+    while (i > 0) {
+        r = i % 26
+        i = (i - r) / 26
+        res = String.fromCharCode(r + 64 + (res === "" ? 1 : 0)) + res
+    }
+    return res
+}
+
 
 // Useless abstraction
 //function Cell(ref) {
@@ -58,6 +70,7 @@ function alpha_to_int(s) {
 function Spreadsheet() {
     this.cell_contents = []
     this.parsed_formulas = []
+    this.cells_referencing = {}
 }
 
 Spreadsheet.prototype.set = function(x, y, formula) {
@@ -79,6 +92,15 @@ Spreadsheet.prototype.set = function(x, y, formula) {
 
     if (!this.parsed_formulas[x]) { this.parsed_formulas[x] = [] }
     if (!this.parsed_formulas[x][y]) { this.parsed_formulas[x][y] = parsed_formula }
+
+    // Maintain an index of which cells to update after a cell was updated
+    var ref = int_to_alpha(x) + y
+    for (cell of parsed_formula.get_cells()) {
+        if (!this.cells_referencing[cell]) { this.cells_referencing[cell] = [] }
+        if (this.cells_referencing[cell].indexOf(ref) === -1) {
+            this.cells_referencing[cell].push(ref)
+        }
+    }
 }
 
 Spreadsheet.prototype.get = function(x, y) {
@@ -371,19 +393,39 @@ Node.prototype.evaluate = function() {
 
 
 
+var cell_width = 200, cell_height = 24
+var x0 = 30, y0 = 100
+var X = 5, Y = 15
+var x, y, div
+var container = document.getElementById("container")
+
+for (x = 1; x <= X; x += 1) {
+    for (y = 1; y <= Y; y += 1) {
+        div = document.createElement('div')
+        div.classList.add("cell")
+        div.style.left = (x0 + cell_width * (x - 1)) + "px"
+        div.style.top = (y0 + cell_height * (y - 1)) + "px"
+
+        container.appendChild(div)
+    }
+}
+
+
+
+
 //var formula = "=90+44*2+  66*7 -plus(4,3)"
 //var formula = "=42"
 //var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
-var formula = "=E6+44+66+IC45*E6"
-//var formula = "=power(2,10)-20+invert(4)"
+//var formula = "=E6+44+66+IC45*E6"
+////var formula = "=power(2,10)-20+invert(4)"
 
-console.log(formula);
+//console.log(formula);
 
-var n = new Node(formula)
+//var n = new Node(formula)
 
-n.construct_from_raw()
+//n.construct_from_raw()
 
-n.print()
+//n.print()
 
 var s = new Spreadsheet()
 
