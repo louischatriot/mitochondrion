@@ -47,25 +47,6 @@ function int_to_alpha(i) {
 }
 
 
-// Useless abstraction
-//function Cell(ref) {
-    //var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-    //if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-
-    //this.x = alpha_to_int(parts[2])
-    //this.x_fixed = (parts[1] === "$")
-
-    //this.y = parseInt(parts[4], 10)
-    //this.y_fixed = (parts[3] === "$")
-
-    //this.ref = ref
-//}
-
-//Cell.prototype.to_string = function() {
-    //return "ref: " + this.ref + " ; x: " + this.x + (this.x_fixed ? " (fixed)": "") + " ; y: " + this.y + (this.y_fixed ? " (fixed)": "")
-//}
-
-
 // Naive datastructure: 2D array, initially empty
 function Spreadsheet() {
     this.cell_contents = []
@@ -73,16 +54,11 @@ function Spreadsheet() {
     this.cells_referencing = {}
 }
 
-Spreadsheet.prototype.set = function(x, y, formula) {
-    // Signature = reference, formula
-    if (typeof x === "string") {
-        formula = y
-        var ref = x
-        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-        x = alpha_to_int(parts[2])
-        y = parseInt(parts[4], 10)
-    }
+Spreadsheet.prototype.set = function(ref, formula) {
+    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+    var x = alpha_to_int(parts[2])
+    var y = parseInt(parts[4], 10)
 
     if (!this.cell_contents[x]) { this.cell_contents[x] = [] }
     this.cell_contents[x][y] = formula
@@ -103,15 +79,11 @@ Spreadsheet.prototype.set = function(x, y, formula) {
     }
 }
 
-Spreadsheet.prototype.get_value = function(x, y) {
-    // Signature = reference
-    if (typeof x === "string") {
-        var ref = x
-        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-        x = alpha_to_int(parts[2])
-        y = parseInt(parts[4], 10)
-    }
+Spreadsheet.prototype.get_value = function(ref) {
+    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+    var x = alpha_to_int(parts[2])
+    var y = parseInt(parts[4], 10)
 
     // Empty cell interpreted as equal to 0
     if (!this.parsed_formulas[x] || !this.parsed_formulas[x][y]) {
@@ -127,15 +99,11 @@ Spreadsheet.prototype.get_value = function(x, y) {
     }
 }
 
-Spreadsheet.prototype.get_contents = function(x, y) {
-    // Signature = reference
-    if (typeof x === "string") {
-        var ref = x
-        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-        x = alpha_to_int(parts[2])
-        y = parseInt(parts[4], 10)
-    }
+Spreadsheet.prototype.get_contents = function(ref) {
+    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+    var x = alpha_to_int(parts[2])
+    var y = parseInt(parts[4], 10)
 
     if (!this.cell_contents[x] || !this.cell_contents[x][y]) {
         return ""
@@ -457,12 +425,14 @@ function set_cell_formula(ref, formula) {
 }
 
 
+// Selecting a cell
 for (cell of container.querySelectorAll("div.cell")) {
     cell.addEventListener("click", function (evt) {
         var ref = evt.target.getAttribute("cell-name");
         for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
         evt.target.classList.add("selected")
         input_bar.value = s.get_contents(ref)
+        input_bar.focus()
     })
 }
 
