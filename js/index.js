@@ -85,13 +85,13 @@ Spreadsheet.prototype.set = function(x, y, formula) {
     }
 
     if (!this.cell_contents[x]) { this.cell_contents[x] = [] }
-    if (!this.cell_contents[x][y]) { this.cell_contents[x][y] = formula }
+    this.cell_contents[x][y] = formula
 
     var parsed_formula = new Node(formula)
     parsed_formula.construct_from_raw()
 
     if (!this.parsed_formulas[x]) { this.parsed_formulas[x] = [] }
-    if (!this.parsed_formulas[x][y]) { this.parsed_formulas[x][y] = parsed_formula }
+    this.parsed_formulas[x][y] = parsed_formula
 
     // Maintain an index of which cells to update after a cell was updated
     var ref = int_to_alpha(x) + y
@@ -103,7 +103,7 @@ Spreadsheet.prototype.set = function(x, y, formula) {
     }
 }
 
-Spreadsheet.prototype.get = function(x, y) {
+Spreadsheet.prototype.get_value = function(x, y) {
     // Signature = reference
     if (typeof x === "string") {
         var ref = x
@@ -121,15 +121,33 @@ Spreadsheet.prototype.get = function(x, y) {
         // TODO: avoid calculating the same intermediate value multiple times (memoize recursive algorithm)
         // TODO: don't calculate the same cell value multiple times if cell appears multiple times in the formula
         var values = {}
-        for (cell of this.parsed_formulas[x][y].get_cells()) { values[cell] = this.get(cell) }
+        for (cell of this.parsed_formulas[x][y].get_cells()) { values[cell] = this.get_value(cell) }
         this.parsed_formulas[x][y].set_cell_values(values)
         return this.parsed_formulas[x][y].evaluate()
+    }
+}
+
+Spreadsheet.prototype.get_contents = function(x, y) {
+    // Signature = reference
+    if (typeof x === "string") {
+        var ref = x
+        var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
+        if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+        x = alpha_to_int(parts[2])
+        y = parseInt(parts[4], 10)
+    }
+
+    if (!this.cell_contents[x] || !this.cell_contents[x][y]) {
+        return ""
+    } else {
+        return this.cell_contents[x][y]
     }
 }
 
 Spreadsheet.prototype.get_referencing = function(ref) {
     return (this.cells_referencing[ref] || [])
 }
+
 
 
 // Simulating named arguments with an object
@@ -415,7 +433,7 @@ for (x = 1; x <= X; x += 1) {
     }
 }
 
-var input_bar = document.createElement('div')
+var input_bar = document.createElement('input')
 input_bar.classList.add("cell")
 input_bar.style.left = x0 + "px"
 input_bar.style.top = y0 - 60 + "px"
@@ -431,36 +449,30 @@ function get_div(ref) {
 
 function set_cell_formula(ref, formula) {
     s.set(ref, formula)
-    get_div(ref).innerHTML = s.get(ref)
+    get_div(ref).innerHTML = s.get_value(ref)
 
     for (cell of s.get_referencing(ref)) {
-        get_div(cell).innerHTML = s.get(cell)
+        get_div(cell).innerHTML = s.get_value(cell)
     }
 }
 
 
+for (cell of container.querySelectorAll("div.cell")) {
+    cell.addEventListener("click", function (evt) {
+        var ref = evt.target.getAttribute("cell-name");
+        for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
+        evt.target.classList.add("selected")
+        input_bar.value = s.get_contents(ref)
+    })
+}
 
 
-
-//var formula = "=90+44*2+  66*7 -plus(4,3)"
-//var formula = "=42"
-//var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
-//var formula = "=E6+44+66+IC45*E6"
-////var formula = "=power(2,10)-20+invert(4)"
-
-//console.log(formula);
-
-//var n = new Node(formula)
-
-//n.construct_from_raw()
-
-//n.print()
-
-
-
-// TODO: add support for parentheses
-
-
-
-
+input_bar.addEventListener("keypress", function(evt) {
+    if (evt.keyCode === 13) {   // Press Enter
+        var ref = container.querySelectorAll(".selected")[0].getAttribute("cell-name")
+        set_cell_formula(ref, evt.target.value)
+        for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
+        evt.target.value = ""
+    }
+})
 

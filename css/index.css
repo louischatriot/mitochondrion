@@ -1,4 +1,4 @@
-div.cell {
+.cell {
     border: solid 1px #bbb;
     height: 24px;
     width: 200px;
@@ -6,5 +6,9 @@ div.cell {
     font-family: Raleway;
     position: fixed;
     box-sizing: border-box;
+}
+
+.selected {
+    background-color: aliceblue;
 }
 
