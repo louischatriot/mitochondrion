@@ -10,11 +10,19 @@ var operators_mapping = {
 
 
 function plus(a, b) { return a + b }
+function minus(a, b) { return a - b }
+function multiply(a, b) { return a * b }
+function divide(a, b) { return a / b }
 function invert(a) { return - a }
+function power(n, p) { return n ** p }
 
 var functions = {
     "invert": invert,
-    "plus": plus
+    "plus": plus,
+    "minus": minus,
+    "multiply": multiply,
+    "divide": divide,
+    "power": power
 }
 
 
@@ -23,7 +31,8 @@ function Node(args) {
     this.children = []
 
     if (typeof(args) === "string") {
-        this.raw = "=" + args
+        if (args.length > 0 && args[0] !== "=") { args = "=" + args }
+        this.raw = args
         return
     }
 
@@ -171,14 +180,18 @@ Node.prototype.construct_from_raw = function() {
 
     if (elements.length > 1) {   // Infix expression
         // TODO: add support for parentheses
-        var i0, j, n
-        for (op of operators) {
+        var i0, j, n, op
+        for (ops of [["*", "/"], ["+", "-"]]) {
             i0 = null
-            while (i0 !== -1) {
+            while (i0 !== elements.length) {
                 _elements = []
-                i0 = elements.indexOf(op)
 
-                if (i0 !== -1) {
+                // Index of first operator in ops appearing in elements array
+                // If none found, i0 = elements.length
+                i0 = Math.min.apply(null, ops.map(function(op) { return elements.indexOf(op) === -1 ? elements.length : elements.indexOf(op) }))
+                op = elements[i0]
+
+                if (i0 !== elements.length) {
                     for (j = 0; j < i0 - 1; j += 1) { _elements.push(elements[j]) }
                     n = new Node({ func: operators_mapping[op] })
                     n.add_child(new Node(elements[i0 - 1]))
@@ -230,10 +243,17 @@ Node.prototype.construct_from_raw = function() {
 Node.prototype.evaluate = function() {
     if (this.value) {
         return this.value
+
     } else if (this.cell) {
         return this.cell.value()
+
     } else if (this.func) {
-        // TODO
+        var f = functions[this.func]
+        if (!f) { throw new Error("Unknown function " + this.func) }
+        if (f.length != this.children.length) { throw new Error(this.func + " expects " + f.length + " arguments") }
+
+        return f.apply(null, this.children.map(function(c) { return c.evaluate() }))
+
     } else {
         throw new Error("Illegal node!")
     }
@@ -241,16 +261,19 @@ Node.prototype.evaluate = function() {
 
 
 
-var formula = "=E5+44*2+  66*7 -plus(4,3)"
+//var formula = "=90+44*2+  66*7 -plus(4,3)"
 //var formula = "=42"
 //var formula = "=invert(768,55 * plus(3, invert(5)), 789, 55+77)+99999"
 //var formula = "=E6+44+66"
+var formula = "=power(2,10)-20+invert(4)"
 
-var n = new Node({ raw: formula })
+var n = new Node(formula)
 
 n.construct_from_raw()
 
 n.print()
+
+console.log(n.evaluate());
 
 // TODO: add support for parentheses
 
