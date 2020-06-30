@@ -46,6 +46,20 @@ function int_to_alpha(i) {
     return res
 }
 
+var ref_re = /^(\$?)([A-Z]+)(\$?)([0-9]+)$/
+var ref_within_re = /\$?[A-Z]+\$?[0-9]+/g
+
+function ref_to_coords(ref) {
+    var parts = ref.match(ref_re)
+    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
+    return {
+        x: alpha_to_int(parts[2]),
+        x_fixed: (parts[1] === "$"),
+        y: parseInt(parts[4], 10),
+        y_fixed: (parts[3] === "$"),
+    }
+}
+
 
 // Naive datastructure: 2D array, initially empty
 function Spreadsheet() {
@@ -55,10 +69,9 @@ function Spreadsheet() {
 }
 
 Spreadsheet.prototype.set = function(ref, formula) {
-    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-    var x = alpha_to_int(parts[2])
-    var y = parseInt(parts[4], 10)
+    var coords = ref_to_coords(ref)
+    var x = coords.x
+    var y = coords.y
 
     if (!this.cell_contents[x]) { this.cell_contents[x] = [] }
     this.cell_contents[x][y] = formula
@@ -80,10 +93,9 @@ Spreadsheet.prototype.set = function(ref, formula) {
 }
 
 Spreadsheet.prototype.get_value = function(ref) {
-    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-    var x = alpha_to_int(parts[2])
-    var y = parseInt(parts[4], 10)
+    var coords = ref_to_coords(ref)
+    var x = coords.x
+    var y = coords.y
 
     // Empty cell interpreted as equal to 0
     if (!this.parsed_formulas[x] || !this.parsed_formulas[x][y]) {
@@ -100,10 +112,9 @@ Spreadsheet.prototype.get_value = function(ref) {
 }
 
 Spreadsheet.prototype.get_contents = function(ref) {
-    var parts = ref.match(/^(\$?)([A-Z]+)(\$?)([0-9]+)$/)
-    if (!parts) { throw new Error("Unexpected format for cell reference: " + ref) }
-    var x = alpha_to_int(parts[2])
-    var y = parseInt(parts[4], 10)
+    var coords = ref_to_coords(ref)
+    var x = coords.x
+    var y = coords.y
 
     if (!this.cell_contents[x] || !this.cell_contents[x][y]) {
         return ""
@@ -114,6 +125,51 @@ Spreadsheet.prototype.get_contents = function(ref) {
 
 Spreadsheet.prototype.get_referencing = function(ref) {
     return (this.cells_referencing[ref] || [])
+}
+
+Spreadsheet.prototype.copy = function (src, dest) {
+    var src_coords = ref_to_coords(src)
+    var dest_coords = ref_to_coords(dest)
+
+    var offset_x = dest_coords.x - src_coords.x
+    var offset_y = dest_coords.y - src_coords.y
+
+    var formula = this.get_contents(src)
+
+    //formula = "=E5+$E5+E$5+$E$5"
+
+    // OK so this whole thing is really the one hack to rule them all, but I don't want to go into
+    // coding a node -> formula function that yields the exact original formula and not an equivalent but different formula
+    var match = formula.match(ref_within_re)
+    var coords, x, y, new_ref
+
+    // Order is probably still wrong, should order the match array in a non inclusive order
+    for (ref of (match || [])) {
+        if (ref[0] === "$") {
+          coords = ref_to_coords(ref)
+          x = coords.x_fixed ? coords.x : coords.x + offset_x,
+          y = coords.y_fixed ? coords.y : coords.y + offset_y
+          new_ref = "" + (coords.x_fixed ? "$" : "") + int_to_alpha(x) + "@@@" + (coords.y_fixed ? "$" : "") + y
+          formula = formula.split(ref).join(new_ref)
+        }
+    }
+
+    for (ref of (match || [])) {
+        if (ref[0] !== "$") {
+          coords = ref_to_coords(ref)
+          x = coords.x_fixed ? coords.x : coords.x + offset_x,
+          y = coords.y_fixed ? coords.y : coords.y + offset_y
+          new_ref = "" + (coords.x_fixed ? "$" : "") + int_to_alpha(x) + "@@@" + (coords.y_fixed ? "$" : "") + y
+          formula = formula.split(ref).join(new_ref)
+        }
+    }
+
+    formula = formula.replace(/@@@/g, "")
+
+    console.log(formula);
+
+
+
 }
 
 
@@ -514,8 +570,6 @@ container.addEventListener("keydown", function(evt) {
         get_div(selected_ref).classList.add("to-be-copied")
         to_be_copied = selected_ref
     }
-
-
 })
 
 
