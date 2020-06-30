@@ -142,7 +142,6 @@ function Node(args) {
     this.raw = args.raw
     this.value = args.value
     this.cell = args.cell
-    //this.cell_value = 0   // Default value
     this.func = args.func
 }
 
@@ -376,6 +375,9 @@ Node.prototype.evaluate = function() {
 
         return f.apply(null, this.children.map(function(c) { return c.evaluate() }))
 
+    } else if (this.raw === "") {
+        return 0
+
     } else {
         throw new Error("Illegal node!")
     }
@@ -420,10 +422,15 @@ function get_div(ref) {
 
 function set_cell_formula(ref, formula) {
     s.set(ref, formula)
-    get_div(ref).innerHTML = s.get_value(ref)
 
-    for (cell of s.get_referencing(ref)) {
-        get_div(cell).innerHTML = s.get_value(cell)
+    // Propagate recalculation, pray for there not to be cycles, no checks implemented yet :)
+    var to_recalculate = [ref], tr
+    while (to_recalculate.length > 0) {
+        tr = to_recalculate.pop()
+        get_div(tr).innerHTML = s.get_value(tr)
+        for (cell of s.get_referencing(tr)) {
+            to_recalculate.push(cell)
+        }
     }
 }
 
@@ -460,6 +467,5 @@ container.addEventListener("keydown", function(evt) {
 
 
 })
-
 
 
