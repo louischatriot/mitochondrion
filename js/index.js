@@ -83,11 +83,13 @@ Spreadsheet.prototype.set = function(ref, formula) {
     this.parsed_formulas[x][y] = parsed_formula
 
     // Maintain an index of which cells to update after a cell was updated
-    var ref = int_to_alpha(x) + y
+    var raw_ref = ref.replace(/\$/g, ""), raw_cell
     for (cell of parsed_formula.get_cells()) {
-        if (!this.cells_referencing[cell]) { this.cells_referencing[cell] = [] }
-        if (this.cells_referencing[cell].indexOf(ref) === -1) {
-            this.cells_referencing[cell].push(ref)
+        raw_cell = cell.replace(/\$/g, "")
+
+        if (!this.cells_referencing[raw_cell]) { this.cells_referencing[raw_cell] = [] }
+        if (this.cells_referencing[raw_cell].indexOf(raw_ref) === -1) {
+            this.cells_referencing[raw_cell].push(raw_ref)
         }
     }
 }
