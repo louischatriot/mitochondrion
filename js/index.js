@@ -136,40 +136,26 @@ Spreadsheet.prototype.copy = function (src, dest) {
 
     var formula = this.get_contents(src)
 
-    //formula = "=E5+$E5+E$5+$E$5"
+    //formula = "=F7+G9+F77+F97"
 
     // OK so this whole thing is really the one hack to rule them all, but I don't want to go into
     // coding a node -> formula function that yields the exact original formula and not an equivalent but different formula
-    var match = formula.match(ref_within_re)
+    var match = formula.match(ref_within_re) || []
+    match = match.sort(function (a, b) { return b.indexOf(a) })   // Should start with refs not substrings of other refs
+
     var coords, x, y, new_ref
-
-    // Order is probably still wrong, should order the match array in a non inclusive order
     for (ref of (match || [])) {
-        if (ref[0] === "$") {
           coords = ref_to_coords(ref)
           x = coords.x_fixed ? coords.x : coords.x + offset_x,
           y = coords.y_fixed ? coords.y : coords.y + offset_y
           new_ref = "" + (coords.x_fixed ? "$" : "") + int_to_alpha(x) + "@@@" + (coords.y_fixed ? "$" : "") + y
           formula = formula.split(ref).join(new_ref)
-        }
     }
 
-    for (ref of (match || [])) {
-        if (ref[0] !== "$") {
-          coords = ref_to_coords(ref)
-          x = coords.x_fixed ? coords.x : coords.x + offset_x,
-          y = coords.y_fixed ? coords.y : coords.y + offset_y
-          new_ref = "" + (coords.x_fixed ? "$" : "") + int_to_alpha(x) + "@@@" + (coords.y_fixed ? "$" : "") + y
-          formula = formula.split(ref).join(new_ref)
-        }
-    }
 
     formula = formula.replace(/@@@/g, "")
 
-    console.log(formula);
-
-
-
+    this.set(dest, formula)
 }
 
 
@@ -569,6 +555,13 @@ container.addEventListener("keydown", function(evt) {
         if (to_be_copied) { get_div(to_be_copied).classList.remove("to-be-copied") }
         get_div(selected_ref).classList.add("to-be-copied")
         to_be_copied = selected_ref
+    }
+
+    if (evt.key === "v" && evt.ctrlKey) {
+        if (to_be_copied) {
+            s.copy(to_be_copied, selected_ref)
+            set_cell_formula(selected_ref, s.get_contents(selected_ref))
+        }
     }
 })
 
