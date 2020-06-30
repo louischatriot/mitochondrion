@@ -386,13 +386,42 @@ Node.prototype.evaluate = function() {
 
 
 var cell_width = 200, cell_height = 24
-var x0 = 100, y0 = 100
+var x0 = 65, y0 = 100
 var X = 5, Y = 15
 var x, y, div
 var container = document.getElementById("container")
 var cells = document.createElement('div')
 
 container.appendChild(cells)
+
+// x axis
+for (x = 1; x <= X; x += 1) {
+    div = document.createElement('div')
+    div.classList.add("cell")
+    div.style.left = (x0 + cell_width * (x - 1)) + "px"
+    div.style.top = (y0 - 25) + "px"
+    div.style["text-align"] = "center"
+    div.style["font-weight"] = "bold"
+
+    div.innerHTML = int_to_alpha(x)
+
+    container.appendChild(div)
+}
+
+// y axis
+for (y = 1; y <= Y; y += 1) {
+    div = document.createElement('div')
+    div.classList.add("cell")
+    div.style.left = "0px"
+    div.style.top = (y0 + cell_height * (y - 1)) + "px"
+    div.style.width = (x0 - 10) + "px"
+    div.style["text-align"] = "right"
+    div.style["font-weight"] = "bold"
+
+    div.innerHTML = y
+
+    container.appendChild(div)
+}
 
 for (x = 1; x <= X; x += 1) {
     for (y = 1; y <= Y; y += 1) {
@@ -424,6 +453,15 @@ input_bar.style.top = (y0 - 70) + "px"
 input_bar.style.width = (X * cell_width) + "px"
 container.appendChild(input_bar)
 
+var selected_cell_div = document.createElement("div")
+selected_cell_div.classList.add("cell")
+selected_cell_div.style.left = "0px"
+selected_cell_div.style.top = (y0 - 70) + "px"
+selected_cell_div.style.width = (x0 - 10) + "px"
+selected_cell_div.style["text-align"] = "right"
+selected_cell_div.style["font-weight"] = "bold"
+container.appendChild(selected_cell_div)
+
 
 var s = new Spreadsheet()
 
@@ -453,6 +491,7 @@ cells.addEventListener("click", function (evt) {
     for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
     evt.target.classList.add("selected")
     selected_ref = ref
+    selected_cell_div.innerHTML = ref
 
     input_bar.value = s.get_contents(ref)
     input_bar.focus()
