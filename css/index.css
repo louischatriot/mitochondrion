@@ -1,5 +1,4 @@
 .cell {
-    border: solid 1px #bbb;
     height: 24px;
     width: 200px;
     font-size: 18px;
@@ -8,11 +7,32 @@
     box-sizing: border-box;
 }
 
+.border-top-left {
+    border: solid 1px #bbb;
+}
+
+.border-top {
+    border-right: solid 1px #bbb;
+    border-top: solid 1px #bbb;
+    border-bottom: solid 1px #bbb;
+}
+
+.border-left {
+    border-right: solid 1px #bbb;
+    border-left: solid 1px #bbb;
+    border-bottom: solid 1px #bbb;
+}
+
+.border-grid {
+    border-right: solid 1px #bbb;
+    border-bottom: solid 1px #bbb;
+}
+
 .selected {
     background-color: aliceblue;
 }
 
-.to-be-copied {
+div.to-be-copied {
     border: dashed blue 2px;
 }
 

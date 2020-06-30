@@ -386,7 +386,7 @@ Node.prototype.evaluate = function() {
 
 
 var cell_width = 200, cell_height = 24
-var x0 = 30, y0 = 100
+var x0 = 100, y0 = 100
 var X = 5, Y = 15
 var x, y, div
 var container = document.getElementById("container")
@@ -401,6 +401,17 @@ for (x = 1; x <= X; x += 1) {
         div.style.left = (x0 + cell_width * (x - 1)) + "px"
         div.style.top = (y0 + cell_height * (y - 1)) + "px"
         div.setAttribute("cell-name", int_to_alpha(x) + y)
+
+        // Make sure borders do not overlap
+        if (x === 1 && y === 1) {
+            div.classList.add("border-top-left")
+        } else if (y === 1) {
+            div.classList.add("border-top")
+        } else if (x === 1) {
+            div.classList.add("border-left")
+        } else {
+            div.classList.add("border-grid")
+        }
 
         cells.appendChild(div)
     }
