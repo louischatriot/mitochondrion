@@ -60,6 +60,12 @@ function ref_to_coords(ref) {
     }
 }
 
+// Important: this only moves the ref, not taking $ into account
+function move_ref(ref, offset_x, offset_y) {
+    var coords = ref_to_coords(ref)
+    return (coords.x_fixed ? "$" : "") + int_to_alpha(coords.x + offset_x) + (coords.y_fixed ? "$" : "") + (coords.y + offset_y)
+}
+
 
 // Naive datastructure: 2D array, initially empty
 function Spreadsheet() {
@@ -529,15 +535,18 @@ function set_cell_formula(ref, formula) {
 
 var selected_ref
 
+function select_ref(ref) {
+    for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
+    cells.querySelectorAll("div[cell-name=" + ref + "]")[0].classList.add("selected")
+    selected_ref = ref
+    selected_cell_div.innerHTML = ref
+    input_bar.value = s.get_contents(ref)
+}
+
 // Selecting a cell
 cells.addEventListener("click", function (evt) {
     var ref = evt.target.getAttribute("cell-name");
-    for (div of container.querySelectorAll(".selected")) { div.classList.remove("selected") }
-    evt.target.classList.add("selected")
-    selected_ref = ref
-    selected_cell_div.innerHTML = ref
-
-    input_bar.value = s.get_contents(ref)
+    select_ref(ref)
     input_bar.focus()
 })
 
@@ -565,6 +574,11 @@ container.addEventListener("keydown", function(evt) {
             set_cell_formula(selected_ref, s.get_contents(selected_ref))
         }
     }
+
+    if (evt.key === "ArrowLeft") { if (selected_ref) { select_ref(move_ref(selected_ref, -1, 0)) } }
+    if (evt.key === "ArrowRight") { if (selected_ref) { select_ref(move_ref(selected_ref, 1, 0)) } }
+    if (evt.key === "ArrowUp") { if (selected_ref) { select_ref(move_ref(selected_ref, 0, -1)) } }
+    if (evt.key === "ArrowDown") { if (selected_ref) { select_ref(move_ref(selected_ref, 0, 1)) } }
 })
 
 
