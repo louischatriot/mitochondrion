@@ -313,8 +313,8 @@ Node.prototype.construct_from_raw = function() {
             if (opened > 0) { throw new Error("Expected closing parenthesis") }
             elements.push(func_name)
 
-        } else if (f[i] >= 'A' && f[i] <= 'Z') {   // Cell name
-            cell_name = f.match(new RegExp("^.{" + i + "}([A-Z]+[0-9]+)"))
+        } else if ((f[i] >= 'A' && f[i] <= 'Z') || f[i] === "$") {   // Cell name
+            cell_name = f.match(new RegExp("^.{" + i + "}(\\$?[A-Z]+\\$?[0-9]+)"))
             if (!cell_name) { throw new Error("Expected cell name") }
             cell_name = cell_name[1]
             elements.push(cell_name)
